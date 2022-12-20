@@ -31,12 +31,15 @@ import bvh_cuda
 class BVHFunction(autograd.Function):
 
     max_collisions = 8
+    threshold = 0.
 
     @staticmethod
     @torch.no_grad()
     def forward(ctx, triangles):
         outputs = bvh_cuda.forward(triangles,
-                                   max_collisions=BVHFunction.max_collisions)
+                                   max_collisions=BVHFunction.max_collisions, t=BVHFunction.threshold)
+        # outputs = bvh_cuda.forward(triangles,
+        #                            max_collisions=BVHFunction.max_collisions)
         ctx.save_for_backward(outputs, triangles)
         return outputs
 
@@ -47,10 +50,14 @@ class BVHFunction(autograd.Function):
 
 class BVH(nn.Module):
 
-    def __init__(self, max_collisions=8):
+    def __init__(self, max_collisions=8, threshold=0.):
         super(BVH, self).__init__()
         self.max_collisions = max_collisions
+        self.threshold = threshold
         BVHFunction.max_collisions = self.max_collisions
+        BVHFunction.threshold = self.threshold
 
     def forward(self, triangles):
+        BVHFunction.max_collisions = self.max_collisions
+        BVHFunction.threshold = self.threshold
         return BVHFunction.apply(triangles)
